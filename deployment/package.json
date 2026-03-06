@@ -1,0 +1,18 @@
+{
+  "name": "tokenizeart42-deployment",
+  "version": "1.0.0",
+  "description": "Scripts de déploiement pour le projet TokenizeArt42",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy:testnet": "npx hardhat run deploy.js --network bscTestnet",
+    "verify": "npx hardhat verify --network bscTestnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.22.0",
+    "dotenv": "^16.4.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}
