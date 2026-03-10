@@ -1,91 +1,153 @@
-# TokenizeArt — Build your own NFT
+# TokenizeArt42 — minimal NFT project (sans OpenZeppelin)
 
-**Projet 42 x BNB Chain** | Version 1.0 | Auteur : matth
+Ce dépôt contient une implémentation autonome d'un contrat NFT (ERC‑721‑like) nommée `TokenizeArt42`, des scripts de déploiement/démonstration, et des outils pour uploader une image sur IPFS via `nft.storage` puis la mint en NFT.
 
----
+Principaux choix techniques
+- Sans OpenZeppelin : la logique ERC‑721 a été réimplémentée minimalement pour réduire les dépendances et servir d'exemple pédagogique. Attention : cela n'inclut pas toutes les garanties/fonctionnalités d'OpenZeppelin (par ex. ERC165, `safeTransferFrom`).
+- Métadonnées on‑chain : chaque token stocke `artist`, `name` et `imageURI` on‑chain. `tokenURI()` construit un data:application/json;base64,... mais un getter `getMetadata()` renvoie directement les champs si besoin.
+- Upload automatisé : script `code/scripts/upload-and-mint.js` pour déposer une image sur nft.storage et appeler `mintNFT` avec l'URI IPFS.
 
-## Description
+Structure du repo (essentielle)
+- `code/TokenizeArt42.sol` — contrat NFT principal
+- `deployment/deploy.js` — script de déploiement (Hardhat)
+- `deployment/demo.js` — script d'exemple pour mint et lire metadata
+- `deployment/test-run.js` — test-run local (deploy + mint + lecture)
+- `code/scripts/upload-and-mint.js` — upload vers nft.storage + mint (Node.js)
+- `documentation/technicaldoc.md` — documentation détaillée des méthodes (méthode et événements)
+- `documentation/deployment.md` — guide de déploiement et utilisation des scripts
 
-Ce projet consiste à créer, déployer et minter un NFT (Non-Fungible Token) sur la BNB Smart Chain Testnet dans le cadre du projet **TokenizeArt** de l'école 42.
+Quick start (local)
+1. Installer les dépendances :
 
----
-
-## Choix techniques
-
-### Blockchain : BNB Smart Chain Testnet
-- **Pourquoi BSC ?** Frais de transaction très faibles, compatible EVM, large communauté Web3.
-- **Réseau utilisé :** BSC Testnet (Chain ID 97) — aucune vraie crypto n'est utilisée.
-- **Standard :** BEP-721 (100% compatible avec ERC-721).
-
-### Langage : Solidity ^0.8.20
-- Standard de l'industrie pour les smart contracts sur blockchains EVM.
-- Compilateur le plus récent et stable à la date du projet.
-- Support natif des standards ERC-721 via OpenZeppelin v5.
-
-### Bibliothèque : OpenZeppelin v5
-- Référence absolue de l'industrie pour la sécurité des smart contracts.
-- Fournit ERC721, Ownable, Base64, Strings prêts à l'emploi et audités.
-
-### Outil de déploiement : Remix IDE + Hardhat
-- **Remix :** déploiement interactif sans installation, idéal pour tester.
-- **Hardhat :** automatisation complète via scripts Node.js.
-
-### Stockage de l'image : IPFS via Pinata
-- Stockage décentralisé et permanent — pas de serveur central vulnérable.
-- Le CID (hash) garantit l'immuabilité de l'image.
-
-### Métadonnées : On-chain (Base64 JSON)
-- Les métadonnées ne dépendent d'aucun serveur externe.
-- `tokenURI()` retourne un JSON encodé en Base64 directement depuis la blockchain.
-
----
-
-## Contrat déployé
-
-| Paramètre | Valeur |
-|-----------|--------|
-| Réseau | BSC Testnet (Chain ID: 97) |
-| Adresse du contrat | `0xTODO_APRES_DEPLOIEMENT` |
-| Transaction de déploiement | `0xTODO` |
-| Token ID du NFT minté | `0` |
-| Propriétaire | `0xTODO_WALLET` |
-| Image IPFS | `ipfs://TODO_CID` |
-
-> Voir sur BscScan : https://testnet.bscscan.com/address/0xTODO
-
----
-
-## Structure du dépôt
-
-```
-.
-├── README.md                   ← Ce fichier (choix techniques + infos contrat)
-├── GUIDE.md                    ← Guide complet étape par étape (tout expliqu)
-├── code/
-│   └── TokenizeArt42.sol       ← Smart contract ERC-721/BEP-721 commenté
-├── deployment/
-│   ├── README.md               ← Instructions de déploiement (Remix + Hardhat)
-│   ├── deploy.js               ← Script de déploiement automatisé
-│   ├── hardhat.config.js       ← Configuration Hardhat + BSC Testnet
-│   ├── package.json            ← Dépendances npm
-│   └── .env.example            ← Template des variables d'environnement
-├── mint/
-│   ├── README.md               ← Instructions de mint (Remix + Hardhat)
-│   ├── mint.js                 ← Script de mint automatisé
-│   ├── hardhat.config.js       ← Config Hardhat pour le mint
-│   └── package.json            ← Dépendances npm
-└── documentation/
-    └── whitepaper.md           ← Documentation complète du NFT
+```bash
+npm install
 ```
 
+2. Lancer un nœud local Hardhat :
+
+```bash
+npx hardhat node
+```
+
+3. Déployer localement :
+
+```bash
+npx hardhat run deployment/deploy.js --network localhost
+```
+
+4. Exécuter le test d'intégration local (déploy + mint + lecture) :
+
+```bash
+npx hardhat run deployment/test-run.js --network localhost
+```
+
+Mint d'une image locale via nft.storage
+1. Crée un fichier `.env` à la racine avec :
+
+```
+NFT_STORAGE_API_KEY=...        # clé nft.storage
+PRIVATE_KEY=0x...             # clé deployer / wallet
+CONTRACT_ADDRESS=0x...        # adresse du contrat déployé (optionnel si deploy local)
+SEPOLIA_RPC_URL=...          # si tu veux utiliser Sepolia / testnet
+```
+
+2. Upload & mint :
+
+```bash
+node code/scripts/upload-and-mint.js ./assets/42dofusNFT.png "Titre du NFT" "Artiste" 0xTonAdresse
+```
+
+Notes importantes
+- tokenURI() renvoie un data URI Base64 construit on‑chain ; dans certains cas (client JS strict) cela peut provoquer une erreur de décodage UTF‑8. Utilise `getMetadata(tokenId)` pour un accès robuste aux champs si tu rencontres ce problème.
+- Pour un usage en production, je recommande : ajouter `safeTransferFrom`, ERC165, et restreindre `mintNFT` à un rôle `MINTER`/`ADMIN`.
+
+Si tu veux, je peux :
+- corriger l'encodeur Base64 on‑chain pour éliminer le problème de décodage
+- ajouter `safeTransferFrom` + ERC165
+- implémenter un script de déploiement complet pour Sepolia et une vérification automatique Etherscan
+# Déploiement du contrat TokenizeArt42
+
+## Méthode 1 — Remix IDE (recommandée, sans installation)
+
+### Étape 1 : Ouvrir le contrat dans Remix
+1. Va sur **https://remix.ethereum.org/**
+2. Dans le panneau gauche, crée un nouveau fichier : `TokenizeArt42.sol`
+3. Copie-colle le contenu de `../code/TokenizeArt42.sol`
+
+### Étape 2 : Compiler
+1. Clique sur l'icône **Solidity Compiler** (onglet en forme de S)
+2. Sélectionne la version **0.8.20**
+3. Active **"Enable optimization"** (200 runs)
+4. Clique **"Compile TokenizeArt42.sol"**
+5. ✅ Aucune erreur = compilation réussie
+
+### Étape 3 : Configurer MetaMask sur BSC Testnet
+Ajoute le réseau manuellement dans MetaMask :
+| Champ | Valeur |
+|-------|--------|
+| Nom du réseau | BSC Testnet |
+| URL RPC | `https://data-seed-prebsc-1-s1.binance.org:8545/` |
+| Chain ID | `97` |
+| Symbole | `tBNB` |
+| Block Explorer | `https://testnet.bscscan.com` |
+
+### Étape 4 : Obtenir des tBNB gratuits (faucet)
+1. Va sur **https://www.bnbchain.org/en/testnet-faucet**
+2. Entre ton adresse MetaMask
+3. Attends ~1 minute → tu reçois 0.5 tBNB (suffisant pour déployer + minter)
+
+### Étape 5 : Déployer
+1. Dans Remix, clique l'onglet **"Deploy & Run Transactions"** (icône fusée)
+2. **Environment** : sélectionne `Injected Provider - MetaMask`
+3. MetaMask s'ouvre → choisis le compte BSC Testnet
+4. Clique **"Deploy"**
+5. Confirme la transaction dans MetaMask
+6. Attends 10-20 secondes → l'adresse du contrat apparaît dans Remix
+
+### Étape 6 : Noter l'adresse du contrat
+Copie l'adresse (ex: `0xAbC123...`) et mets-la à jour dans :
+- `../README.md` (section "Contrat déployé")
+- `../mint/mint.js` (variable `CONTRACT_ADDRESS`)
+
 ---
 
-## Démarrage rapide
+## Méthode 2 — Hardhat (automatisée)
 
-**1. Lire le guide complet :** [GUIDE.md](GUIDE.md)
+### Prérequis
+- Node.js >= 18 installé
+- npm installé
 
-**2. Déployer le contrat :** [deployment/README.md](deployment/README.md)
+### Installation
+```bash
+cd deployment
+npm install
+```
 
-**3. Minter le NFT :** [mint/README.md](mint/README.md)
+### Configuration
+```bash
+cp .env.example .env
+# Édite .env et remplis PRIVATE_KEY avec ta clé privée MetaMask
+```
 
-**4. Vérifier la propriété :** appeler `ownerOf(0)` sur le contrat → retourne l'adresse du propriétaire.
+> ⚠️ Utilise un wallet de test UNIQUEMENT — jamais un wallet avec de vraies crypto !
+
+### Compilateur
+```bash
+npm run compile
+```
+
+### Déploiement
+```bash
+npm run deploy:testnet
+```
+
+Le script affiche l'adresse du contrat déployé. Note-la !
+
+---
+
+## Vérifier que le déploiement a fonctionné
+
+1. Va sur **https://testnet.bscscan.com/**
+2. Recherche ton adresse de contrat
+3. Tu dois voir la transaction de déploiement
+4. Dans l'onglet **"Contract"**, tu peux voir le bytecode déployé

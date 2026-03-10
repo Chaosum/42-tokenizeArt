@@ -1,213 +1,254 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// ============================================================
-// Imports OpenZeppelin - bibliothèque de contrats sécurisés
-// ============================================================
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-// ERC721     : implémentation standard du token non-fongible
-import "@openzeppelin/contracts/access/Ownable.sol";
-// Ownable    : restreint certaines fonctions au propriétaire du contrat
-import "@openzeppelin/contracts/utils/Base64.sol";
-// Base64     : encode les métadonnées JSON directement on-chain (bonus)
-import "@openzeppelin/contracts/utils/Strings.sol";
-// Strings    : convertit uint256 en string pour le JSON
-
 /**
- * @title  TokenizeArt42
- * @author matth (Projet 42 x BNB Chain — TokenizeArt)
- * @notice Contrat NFT ERC-721 / BEP-721 pour le projet TokenizeArt.
- *         Chaque token représente une œuvre d'art numérique unique.
- *         Les métadonnées (nom, artiste, image) sont encodées on-chain
- *         en Base64 JSON, ce qui rend le NFT totalement auto-suffisant.
- * @dev    Hérite de ERC721 (standard NFT) et Ownable (contrôle d'accès).
- *         Déployé sur BNB Smart Chain Testnet (Chain ID : 97).
+ * @title Minimal ERC721 + on-chain metadata (no OpenZeppelin)
+ * @author matth (adapted)
+ * @notice Self-contained ERC-721-like implementation with Base64 metadata
+ *         encoding. Contains a simple Ownable and basic ERC-721 functions
+ *         sufficient for minting, reading ownerOf, tokenURI and transfer.
  */
-contract TokenizeArt42 is ERC721, Ownable {
+contract TokenizeArt42 {
+    // Basic ERC-721 storage
+    string private _name;
+    string private _symbol;
 
-    // ============================================================
-    // VARIABLES D'ÉTAT
-    // ============================================================
+    // tokenId => owner
+    mapping(uint256 => address) private _owners;
+    // owner => balance
+    mapping(address => uint256) private _balances;
+    // tokenId => approved address
+    mapping(uint256 => address) private _tokenApprovals;
+    // owner => operator => approved
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
 
-    /**
-     * @dev Compteur interne pour générer les token IDs.
-     *      Le premier NFT minté aura l'ID 0, le deuxième l'ID 1, etc.
-     */
-    uint256 private _tokenIdCounter;
+    // Simple Ownable
+    address private _ownerContract;
 
-    /**
-     * @dev Structure qui contient les métadonnées propres à chaque NFT.
-     *      - artist   : le login 42 de l'auteur (obligatoire selon le sujet)
-     *      - name     : le titre du NFT (doit contenir "42")
-     *      - imageURI : l'adresse IPFS de l'image (ex: ipfs://CID...)
-     */
+    // Token metadata storage
     struct NFTMetadata {
         string artist;
         string name;
         string imageURI;
     }
-
-    /**
-     * @dev Mapping : token ID => métadonnées.
-     *      Permet de retrouver les métadonnées à partir de l'ID du token.
-     */
     mapping(uint256 => NFTMetadata) private _nftMetadata;
 
-    // ============================================================
-    // ÉVÉNEMENTS
-    // ============================================================
+    uint256 private _tokenIdCounter;
 
-    /**
-     * @dev Émis à chaque mint d'un nouveau NFT.
-     *      Les events sont enregistrés dans la blockchain et permettent
-     *      de suivre l'activité du contrat (visible sur BscScan).
-     * @param to       Adresse du receveur du NFT
-     * @param tokenId  ID du token créé
-     * @param imageURI URI IPFS de l'image
-     */
-    event NFTMinted(
-        address indexed to,
-        uint256 indexed tokenId,
-        string imageURI
-    );
+    // Events
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event NFTMinted(address indexed to, uint256 indexed tokenId, string imageURI);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    // ============================================================
-    // CONSTRUCTEUR
-    // ============================================================
+    // Errors
+    error ZeroAddress();
+    error NotOwner();
+    error NotApproved();
+    error TokenDoesNotExist();
 
-    /**
-     * @dev Le constructeur est exécuté UNE SEULE FOIS lors du déploiement.
-     *      Il initialise :
-     *      - ERC721("42 TokenizeArt", "ART42") : nom et symbole de la collection
-     *      - Ownable(msg.sender)               : le deployer devient propriétaire
-     */
-    constructor() ERC721("42 TokenizeArt", "ART42") Ownable(msg.sender) {}
+    modifier onlyOwner() {
+        if (msg.sender != _ownerContract) revert NotOwner();
+        _;
+    }
 
-    // ============================================================
-    // FONCTIONS PRINCIPALES
-    // ============================================================
+    constructor() {
+        _name = "42 TokenizeArt";
+        _symbol = "ART42";
+        _ownerContract = msg.sender;
+        emit OwnershipTransferred(address(0), msg.sender);
+    }
 
-    /**
-     * @notice  Mint (crée) un nouveau NFT et l'envoie à l'adresse spécifiée.
-     * @dev     Seul le propriétaire du contrat peut appeler cette fonction.
-     *          Le modificateur `onlyOwner` (d'Ownable) protège cette fonction.
-     * @param   to        Adresse qui recevra le NFT (généralement ton wallet)
-     * @param   imageURI  URI IPFS de l'image (format : "ipfs://CID...")
-     * @return  tokenId   L'ID du token nouvellement créé
-     */
-    function mintNFT(address to, string memory imageURI)
-        public
-        onlyOwner
-        returns (uint256)
-    {
-        // Vérifications de sécurité
-        require(to != address(0), "Impossible de minter vers l'adresse zero");
-        require(bytes(imageURI).length > 0, "L'URI de l'image ne peut pas etre vide");
+    // ========== Ownership ==========
+    function owner() public view returns (address) {
+        return _ownerContract;
+    }
 
-        // Attribution de l'ID et incrémentation du compteur
+    function transferOwnership(address newOwner) public onlyOwner {
+        if (newOwner == address(0)) revert ZeroAddress();
+        emit OwnershipTransferred(_ownerContract, newOwner);
+        _ownerContract = newOwner;
+    }
+
+    // ========== ERC-721 basics ==========
+    function name() public view returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view returns (string memory) {
+        return _symbol;
+    }
+
+    function balanceOf(address ownerAddr) public view returns (uint256) {
+        if (ownerAddr == address(0)) revert ZeroAddress();
+        return _balances[ownerAddr];
+    }
+
+    function ownerOf(uint256 tokenId) public view returns (address) {
+        address ownerAddr = _owners[tokenId];
+        if (ownerAddr == address(0)) revert TokenDoesNotExist();
+        return ownerAddr;
+    }
+
+    function approve(address to, uint256 tokenId) public {
+        address ownerAddr = _owners[tokenId];
+        if (ownerAddr == address(0)) revert TokenDoesNotExist();
+        if (msg.sender != ownerAddr && !_operatorApprovals[ownerAddr][msg.sender]) revert NotApproved();
+        _tokenApprovals[tokenId] = to;
+        emit Approval(ownerAddr, to, tokenId);
+    }
+
+    function getApproved(uint256 tokenId) public view returns (address) {
+        if (_owners[tokenId] == address(0)) revert TokenDoesNotExist();
+        return _tokenApprovals[tokenId];
+    }
+
+    function setApprovalForAll(address operator, bool approved) public {
+        _operatorApprovals[msg.sender][operator] = approved;
+        emit ApprovalForAll(msg.sender, operator, approved);
+    }
+
+    function isApprovedForAll(address ownerAddr, address operator) public view returns (bool) {
+        return _operatorApprovals[ownerAddr][operator];
+    }
+
+    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
+        address ownerAddr = _owners[tokenId];
+        return (spender == ownerAddr || _tokenApprovals[tokenId] == spender || _operatorApprovals[ownerAddr][spender]);
+    }
+
+    function transferFrom(address from, address to, uint256 tokenId) public {
+        if (!_isApprovedOrOwner(msg.sender, tokenId)) revert NotApproved();
+        if (_owners[tokenId] != from) revert TokenDoesNotExist();
+        if (to == address(0)) revert ZeroAddress();
+
+        // clear approvals
+        delete _tokenApprovals[tokenId];
+
+        _balances[from] -= 1;
+        _balances[to] += 1;
+        _owners[tokenId] = to;
+
+        emit Transfer(from, to, tokenId);
+    }
+
+    // ========== Minting ==========
+    /// @notice Mint a new NFT with metadata. Only contract owner.
+    function mintNFT(address to, string memory imageURI, string memory title, string memory artist) public onlyOwner returns (uint256) {
+        if (to == address(0)) revert ZeroAddress();
+        if (bytes(imageURI).length == 0) revert TokenDoesNotExist();
+
         uint256 tokenId = _tokenIdCounter;
-        _tokenIdCounter++;
+        _tokenIdCounter += 1;
 
-        // Mint du token : _safeMint vérifie que le receveur peut accepter un NFT
-        _safeMint(to, tokenId);
+        _owners[tokenId] = to;
+        _balances[to] += 1;
 
-        // Enregistrement des métadonnées on-chain
-        // ⚠️ REMPLACE "matth" par ton vrai login 42 avant de déployer !
-        _nftMetadata[tokenId] = NFTMetadata({
-            artist: "matth",
-            name: "42 - The Enchanted Realm",
-            imageURI: imageURI
-        });
+        _nftMetadata[tokenId] = NFTMetadata({artist: artist, name: title, imageURI: imageURI});
 
-        // Émission de l'événement (visible sur BscScan)
+        emit Transfer(address(0), to, tokenId);
         emit NFTMinted(to, tokenId, imageURI);
 
         return tokenId;
     }
 
-    // ============================================================
-    // FONCTIONS DE LECTURE (VIEW)
-    // ============================================================
-
-    /**
-     * @notice  Retourne les métadonnées d'un token.
-     * @dev     Fonction de lecture, ne coûte pas de gas si appelée off-chain.
-     * @param   tokenId  L'ID du token à interroger
-     * @return  NFTMetadata struct {artist, name, imageURI}
-     */
-    function getMetadata(uint256 tokenId)
-        public
-        view
-        returns (NFTMetadata memory)
-    {
-        require(
-            _ownerOf(tokenId) != address(0),
-            "Ce token n'existe pas"
-        );
-        return _nftMetadata[tokenId];
-    }
-
-    /**
-     * @notice  Retourne le nombre total de NFT mintés.
-     * @return  Le nombre de tokens créés depuis le déploiement du contrat
-     */
     function totalMinted() public view returns (uint256) {
         return _tokenIdCounter;
     }
 
-    /**
-     * @notice  Génère et retourne les métadonnées du token au format JSON
-     *          encodé en Base64, directement on-chain.
-     * @dev     Override de la fonction tokenURI de ERC721.
-     *          Le format retourné est : "data:application/json;base64,..."
-     *          Ce format est reconnu par OpenSea, MetaMask, et tous les
-     *          explorateurs NFT, sans avoir besoin d'un serveur externe.
-     * @param   tokenId  L'ID du token
-     * @return  Une string contenant les métadonnées JSON encodées en Base64
-     */
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
-        require(
-            _ownerOf(tokenId) != address(0),
-            "Ce token n'existe pas"
-        );
+    // ========== Metadata (tokenURI) ==========
+    function getMetadata(uint256 tokenId) public view returns (NFTMetadata memory) {
+        if (_owners[tokenId] == address(0)) revert TokenDoesNotExist();
+        return _nftMetadata[tokenId];
+    }
 
+    function tokenURI(uint256 tokenId) public view returns (string memory) {
+        if (_owners[tokenId] == address(0)) revert TokenDoesNotExist();
         NFTMetadata memory meta = _nftMetadata[tokenId];
 
-        // Construction du JSON des métadonnées
-        // Format standard OpenSea/EIP-721 Metadata Standard
-        string memory json = Base64.encode(
-            bytes(
-                string(
-                    abi.encodePacked(
-                        '{',
-                            '"name": "', meta.name, '",',
-                            '"description": "NFT cree dans le cadre du projet TokenizeArt a lEcole 42. Artiste : ', meta.artist, '.",',
-                            '"image": "', meta.imageURI, '",',
-                            '"attributes": [',
-                                '{"trait_type": "Artist", "value": "', meta.artist, '"},',
-                                '{"trait_type": "School", "value": "42"},',
-                                '{"trait_type": "Token ID", "value": "', Strings.toString(tokenId), '"},',
-                                '{"trait_type": "Blockchain", "value": "BNB Smart Chain"}',
-                            ']',
-                        '}'
-                    )
-                )
-            )
-        );
+        string memory json = Base64.encode(bytes(string(abi.encodePacked(
+            '{',
+                '"name":"', meta.name, '",',
+                '"description":"NFT cree dans le cadre du projet TokenizeArt a lEcole 42. Artiste : ', meta.artist, '.",',
+                '"image":"', meta.imageURI, '",',
+                '"attributes":[',
+                    '{"trait_type":"Artist","value":"', meta.artist, '"},',
+                    '{"trait_type":"School","value":"42"},',
+                    '{"trait_type":"Token ID","value":"', _toString(tokenId), '"},',
+                    '{"trait_type":"Blockchain","value":"BNB Smart Chain"}',
+                ']',
+            '}'
+        ))));
 
-        // Retour au format data URI (pas besoin de serveur externe)
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
-    // ============================================================
-    // NOTE : ownerOf(tokenId) est HÉRITÉ de ERC721
-    // ============================================================
-    // Tu peux appeler ownerOf(0) pour obtenir le propriétaire du token #0.
-    // Cette fonction est requise par le sujet et est déjà disponible.
-    // Exemple Remix : appelle ownerOf(0) → retourne l'adresse du propriétaire.
+    // ========== Utilities ==========
+    function _toString(uint256 value) internal pure returns (string memory) {
+        // Inspired from OpenZeppelin's toString
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
+    }
+}
+
+/// @notice Minimal Base64 library (encode only)
+library Base64 {
+    bytes internal constant TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    /// @notice Encode bytes to Base64 string
+    function encode(bytes memory data) internal pure returns (string memory) {
+        if (data.length == 0) return "";
+
+        // load the table into memory
+        bytes memory table = TABLE;
+
+        // multiply by 4/3 rounded up
+        uint256 encodedLen = 4 * ((data.length + 2) / 3);
+
+        bytes memory result = new bytes(encodedLen + 32);
+
+        assembly {
+            let tablePtr := add(table, 1)
+            let resultPtr := add(result, 32)
+
+            for { let i := 0 } lt(i, mload(data)) { } {
+                i := add(i, 3)
+                let input := and(mload(add(data, i)), 0xffffff)
+
+                let out := mload(add(tablePtr, and(shr(18, input), 0x3F)))
+                out := shl(8, out)
+                out := add(out, mload(add(tablePtr, and(shr(12, input), 0x3F))))
+                out := shl(8, out)
+                out := add(out, mload(add(tablePtr, and(shr(6, input), 0x3F))))
+                out := shl(8, out)
+                out := add(out, mload(add(tablePtr, and(input, 0x3F))))
+
+                mstore(resultPtr, out)
+                resultPtr := add(resultPtr, 4)
+            }
+
+            switch mod(mload(data), 3)
+            case 1 { mstore(sub(resultPtr, 2), shl(240, 0x3d3d)) }
+            case 2 { mstore(sub(resultPtr, 1), shl(248, 0x3d)) }
+
+            mstore(result, encodedLen)
+        }
+
+        return string(result);
+    }
 }

@@ -12,6 +12,8 @@ module.exports = {
   solidity: {
     version: "0.8.20",
     settings: {
+      // Use viaIR to work around certain "stack too deep" issues during compilation
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 200,
@@ -22,10 +24,11 @@ module.exports = {
   // Chemins du projet
   // sources pointe vers le dossier code/ à la racine du repo
   paths: {
-    sources: "../code",
-    tests: "./test",
-    cache: "./cache",
+    sources: "./code",
+    // Use root artifacts/cache/tests to match current compiled output
     artifacts: "./artifacts",
+    cache: "./cache",
+    tests: "./test",
   },
 
   // Réseaux disponibles
@@ -37,8 +40,16 @@ module.exports = {
     bscTestnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
       chainId: 97,
-      accounts: [process.env.PRIVATE_KEY], // Clé privée dans .env (jamais dans le code !)
+      // If PRIVATE_KEY isn't set, leave accounts undefined so Hardhat uses its default accounts
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
       gasPrice: 20000000000, // 20 gwei
+    },
+
+    // Sepolia testnet (Ethereum)
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "",
+      chainId: 11155111,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
     },
   },
 
@@ -46,6 +57,7 @@ module.exports = {
   etherscan: {
     apiKey: {
       bscTestnet: process.env.BSCSCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
     },
     customChains: [
       {

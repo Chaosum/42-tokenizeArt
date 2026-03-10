@@ -1,15 +1,16 @@
-const hre = require("hardhat");
+// deployment/deploy.js
+// Usage: npx hardhat run deployment/deploy.js --network bscTestnet
+
+const { ethers } = require("hardhat");
 
 async function main() {
-  const contract = await (await hre.ethers.getContractFactory("TokenizeArt42")).deploy();
+  const factory = await ethers.getContractFactory("TokenizeArt42");
+  const contract = await factory.deploy();
   await contract.waitForDeployment();
-
-  const addr = await contract.getAddress();
-  console.log(`Contrat : ${addr}`);
-  console.log(`BscScan : https://testnet.bscscan.com/address/${addr}`);
+  console.log("Deployed TokenizeArt42 at:", await contract.getAddress());
 }
 
 main().catch((err) => {
   console.error(err);
-  process.exitCode = 1;
+  process.exit(1);
 });

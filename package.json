@@ -4,7 +4,8 @@
   "description": "Scripts de déploiement pour le projet TokenizeArt42",
   "scripts": {
     "compile": "npx hardhat compile",
-    "deploy:testnet": "npx hardhat run deploy.js --network bscTestnet",
+  "deploy:testnet": "npx hardhat run deployment/deploy.js --network bscTestnet",
+  "deploy:sepolia": "npx hardhat run deployment/deploy.js --network sepolia",
     "verify": "npx hardhat verify --network bscTestnet"
   },
   "devDependencies": {
@@ -13,6 +14,6 @@
     "dotenv": "^16.4.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.0"
+    "nft.storage": "^6.0.0"
   }
 }
