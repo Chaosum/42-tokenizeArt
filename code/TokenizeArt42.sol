@@ -176,7 +176,7 @@ contract TokenizeArt42 {
                     '{"trait_type":"Artist","value":"', meta.artist, '"},',
                     '{"trait_type":"School","value":"42"},',
                     '{"trait_type":"Token ID","value":"', _toString(tokenId), '"},',
-                    '{"trait_type":"Blockchain","value":"BNB Smart Chain"}',
+                    '{"trait_type":"Blockchain","value":"Sepolia"}',
                 ']',
             '}'
         ))));

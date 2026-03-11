@@ -1,5 +1,5 @@
 // deployment/deploy.js
-// Usage: npx hardhat run deployment/deploy.js --network bscTestnet
+// Usage: npx hardhat run deployment/deploy.js --network sepolia
 
 const { ethers } = require("hardhat");
 

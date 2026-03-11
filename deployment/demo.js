@@ -5,7 +5,7 @@ const { abi: ABI } = require("../artifacts/code/TokenizeArt42.sol/TokenizeArt42.
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 async function main() {
-  const provider = new ethers.JsonRpcProvider(process.env.BSC_TESTNET_RPC || process.env.SEPOLIA_RPC_URL);
+  const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL || process.env.BSC_TESTNET_RPC);
 
   // Chargement des deux wallets
   const wallet1 = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
