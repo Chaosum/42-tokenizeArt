@@ -1,104 +1,81 @@
-# Déploiement et utilisation — TokenizeArt42
+## Déploiement
 
-Ce document explique comment déployer et utiliser le contrat `TokenizeArt42` localement et sur Sepolia (ou BSC Testnet). Il couvre les variables d'environnement nécessaires, les commandes et les points de vigilance.
-
-Pré-requis
-- Node >= 18 recommandé
-- npm
-- Un account wallet (clé privée) avec des fonds pour le réseau ciblé (Sepolia / BSC Testnet) si tu déploies sur testnet.
-
-Variables d'environnement
-Crée `.env` à la racine et définis :
-
-- `SEPOLIA_RPC_URL` — URL RPC pour Sepolia (ex: Infura, Alchemy)
-- `BSC_TESTNET_RPC` — (optionnel) RPC BSC Testnet
-- `PRIVATE_KEY` — clé privée du deployer (0x...)
-- `PRIVATE_KEY_2` — (optionnel) clé d'un second wallet pour demo
-- `NFT_STORAGE_API_KEY` — clé pour `nft.storage` (upload d'images)
-- `CONTRACT_ADDRESS` — adresse du contrat déployé (utilisé par scripts d'interaction si disponible)
-
-Installer les dépendances
+### Setup
 
 ```bash
 npm install
 ```
 
-Compilation
-
-```bash
-npx hardhat compile
-```
-
-Déploiement local (Hardhat node)
-
-1. Lancer un nœud local :
-
-```bash
-npx hardhat node
-```
-
-2. Dans un autre terminal, déployer :
-
-```bash
-npx hardhat run deployment/deploy.js --network localhost
-```
-
-Le script affichera l'adresse du contrat déployé — copie cette adresse dans `.env` si tu veux l'utiliser avec d'autres scripts.
-
-Exécution d'un test complet local (deploy + mint + lecture)
-
-```bash
-npx hardhat run deployment/test-run.js --network localhost
-```
-
-Déploiement sur Sepolia
-
-1. Assure-toi d'avoir un compte avec suffisamment d'ETH sur Sepolia (faucet) et un RPC URL.
-2. Dans `.env` :
+Créer un fichier `.env` :
 
 ```env
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/<PROJECT_ID>
-PRIVATE_KEY=0x... (adress fundée)
+SEPOLIA_RPC_URL=https://11155111.rpc.thirdweb.com/
+PRIVATE_KEY=0x...        # wallet déployeur (owner)
+PRIVATE_KEY_2=0x...      # second wallet (demo.js uniquement)
+ETHERSCAN_API_KEY=...    # clé API Etherscan (pour la vérification)
+CONTRACT_ADDRESS=0x...   # adresse du contrat déployé
+NFT_IMAGE_URI=...        # URL de l'image à minter
+MINT_TITLE=...           # titre du NFT
+MINT_ARTIST=...          # nom de l'artiste
+MINT_TO=0x...            # adresse de destination du mint
 ```
 
-3. Déployer :
+
+### Commandes
 
 ```bash
-npm run deploy:sepolia
+npm run compile                            # compile le contrat → artifacts/
+npm run deploy:sepolia                     # déploiement sur Sepolia (affiche l'adresse)
+npx hardhat verify --network sepolia <addr> # vérifie le source sur Etherscan
+npx hardhat run mint/upload-and-mint.js --network sepolia  # mint un NFT
 ```
 
-Ou directement :
+---
+
+## Code de déploiement
+
+### `deployment/deploy.js`
+
+```js
+const factory = await ethers.getContractFactory("TokenizeArt42"); // charge ABI + bytecode
+const contract = await factory.deploy();                           // envoie la tx de création
+await contract.waitForDeployment();                                // attend la confirmation
+console.log(await contract.getAddress());                          // affiche l'adresse
+```
+
+---
+
+## Vérification Etherscan
+
+La vérification publie le code source sur Etherscan pour permettre une lecture publique du contrat.
+
+**Prérequis** : avoir une clé API Etherscan dans `.env` sous `ETHERSCAN_API_KEY`.
 
 ```bash
-npx hardhat run deployment/deploy.js --network sepolia
+npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
 ```
 
-Après déploiement, copie l'adresse du contrat (affichée en console) dans `CONTRACT_ADDRESS` de `.env`.
+Points importants :
+- Le contrat doit être vérifié **avec exactement les mêmes settings de compilation** que lors du déploiement (`viaIR`, `optimizer`, version Solidity).
+- Toute modification du source après déploiement rendra la vérification impossible sur l'ancienne adresse — il faut redéployer.
+- La config `etherscan.apiKey` doit être une **string simple** (API v2), pas un objet par réseau.
 
-Utiliser `deployment/demo.js`
-- `deployment/demo.js` est un script d'exemple qui : affiche comptes, déploie ou se connecte à un contrat existant, tente un mint et affiche `tokenURI` / `getMetadata`.
-- Modifie la constante d'adresse dans le fichier ou mets `CONTRACT_ADDRESS` dans `.env` pour que le script se connecte au bon contrat.
+---
 
-Uploader une image et mint (nft.storage)
+## Mint
 
-1. Assure-toi d'avoir `NFT_STORAGE_API_KEY` dans `.env`.
-2. Exécute :
+Le script `mint/upload-and-mint.js` lit les paramètres depuis `.env` :
 
 ```bash
-node code/scripts/upload-and-mint.js ./assets/42dofusNFT.png "Titre" "Artiste" 0xDestinataire
+npx hardhat run mint/upload-and-mint.js --network sepolia
 ```
 
-Le script retournera l'URI IPFS et enverra la transaction de mint.
+Il affiche le `tokenId` du NFT minté. Pour lire les métadonnées on-chain :
 
-Points de vigilance / dépannage
-- Insufficient funds : si ta clé privée n'a pas de fonds sur le réseau ciblé, la transaction échouera. Pour Sepolia, utilise un faucet.
-- Invalid accounts in Hardhat config : si `PRIVATE_KEY` n'est absent, la configuration `accounts` peut déclencher une erreur; la config du projet protège contre cela (utilise `undefined` si clé absente).
-- tokenURI decoding error : si `tokenURI` provoque une erreur ABI/UTF‑8 client, lis `getMetadata(tokenId)` pour récupérer `imageURI` et les autres champs.
-- Compatibilité marketplaces : le contrat est minimal ; certaines plateformes attendent `safeTransferFrom` / ERC165. Pour listage public, implémente ces interfaces.
+```js
+const uri = await contract.tokenURI(0); // "data:application/json;base64,..."
+const json = Buffer.from(uri.replace('data:application/json;base64,', ''), 'base64').toString();
+console.log(JSON.parse(json));
+```
 
-Vérifier une transaction
-- Utilise `npx hardhat console --network sepolia` pour interagir manuellement.
-- Ou bien, pour voir la tx hash et la receipt : garde le hash retourné par le script et utilise un explorateur (etherscan pour Sepolia) ou `provider.getTransactionReceipt(hash)`.
 
-Suivi et amélioration
-- Pour rendre le contrat production‑ready : ajouter ERC165, `safeTransferFrom`, tests unitaires (Hardhat + mocha), et restreindre `mintNFT` à un rôle/minter.

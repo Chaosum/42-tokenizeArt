@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/Base64.sol";
+
 /**
- * @title Minimal ERC721 + on-chain metadata (no OpenZeppelin)
- * @author matth (adapted)
- * @notice Self-contained ERC-721-like implementation with Base64 metadata
- *         encoding. Contains a simple Ownable and basic ERC-721 functions
- *         sufficient for minting, reading ownerOf, tokenURI and transfer.
+ * @title TokenizeArt42
+ * @author mservage
  */
 contract TokenizeArt42 {
     // Basic ERC-721 storage
@@ -27,8 +26,8 @@ contract TokenizeArt42 {
 
     // Token metadata storage
     struct NFTMetadata {
-        string artist;
         string name;
+        string artist;
         string imageURI;
     }
     mapping(uint256 => NFTMetadata) private _nftMetadata;
@@ -134,7 +133,6 @@ contract TokenizeArt42 {
     }
 
     // ========== Minting ==========
-    /// @notice Mint a new NFT with metadata. Only contract owner.
     function mintNFT(address to, string memory imageURI, string memory title, string memory artist) public onlyOwner returns (uint256) {
         if (to == address(0)) revert ZeroAddress();
         if (bytes(imageURI).length == 0) revert TokenDoesNotExist();
@@ -145,7 +143,7 @@ contract TokenizeArt42 {
         _owners[tokenId] = to;
         _balances[to] += 1;
 
-        _nftMetadata[tokenId] = NFTMetadata({artist: artist, name: title, imageURI: imageURI});
+        _nftMetadata[tokenId] = NFTMetadata({name: title, artist: artist, imageURI: imageURI});
 
         emit Transfer(address(0), to, tokenId);
         emit NFTMinted(to, tokenId, imageURI);
@@ -170,85 +168,12 @@ contract TokenizeArt42 {
         string memory json = Base64.encode(bytes(string(abi.encodePacked(
             '{',
                 '"name":"', meta.name, '",',
-                '"description":"NFT cree dans le cadre du projet TokenizeArt a lEcole 42. Artiste : ', meta.artist, '.",',
-                '"image":"', meta.imageURI, '",',
-                '"attributes":[',
-                    '{"trait_type":"Artist","value":"', meta.artist, '"},',
-                    '{"trait_type":"School","value":"42"},',
-                    '{"trait_type":"Token ID","value":"', _toString(tokenId), '"},',
-                    '{"trait_type":"Blockchain","value":"Sepolia"}',
-                ']',
+                '"artist":"', meta.artist, '",',
+                '"image":"', meta.imageURI, '"',
             '}'
         ))));
 
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
-    // ========== Utilities ==========
-    function _toString(uint256 value) internal pure returns (string memory) {
-        // Inspired from OpenZeppelin's toString
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
-    }
-}
-
-/// @notice Minimal Base64 library (encode only)
-library Base64 {
-    bytes internal constant TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-    /// @notice Encode bytes to Base64 string
-    function encode(bytes memory data) internal pure returns (string memory) {
-        if (data.length == 0) return "";
-
-        // load the table into memory
-        bytes memory table = TABLE;
-
-        // multiply by 4/3 rounded up
-        uint256 encodedLen = 4 * ((data.length + 2) / 3);
-
-        bytes memory result = new bytes(encodedLen + 32);
-
-        assembly {
-            let tablePtr := add(table, 1)
-            let resultPtr := add(result, 32)
-
-            for { let i := 0 } lt(i, mload(data)) { } {
-                i := add(i, 3)
-                let input := and(mload(add(data, i)), 0xffffff)
-
-                let out := mload(add(tablePtr, and(shr(18, input), 0x3F)))
-                out := shl(8, out)
-                out := add(out, mload(add(tablePtr, and(shr(12, input), 0x3F))))
-                out := shl(8, out)
-                out := add(out, mload(add(tablePtr, and(shr(6, input), 0x3F))))
-                out := shl(8, out)
-                out := add(out, mload(add(tablePtr, and(input, 0x3F))))
-
-                mstore(resultPtr, out)
-                resultPtr := add(resultPtr, 4)
-            }
-
-            switch mod(mload(data), 3)
-            case 1 { mstore(sub(resultPtr, 2), shl(240, 0x3d3d)) }
-            case 2 { mstore(sub(resultPtr, 1), shl(248, 0x3d)) }
-
-            mstore(result, encodedLen)
-        }
-
-        return string(result);
-    }
 }

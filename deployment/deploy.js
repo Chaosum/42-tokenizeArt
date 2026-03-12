@@ -7,7 +7,7 @@ async function main() {
   const factory = await ethers.getContractFactory("TokenizeArt42");
   const contract = await factory.deploy();
   await contract.waitForDeployment();
-  console.log("Deployed TokenizeArt42 at:", await contract.getAddress());
+  console.log(await contract.getAddress());
 }
 
 main().catch((err) => {

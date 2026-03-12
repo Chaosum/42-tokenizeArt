@@ -4,16 +4,18 @@
   "description": "Scripts de déploiement pour le projet TokenizeArt42",
   "scripts": {
     "compile": "npx hardhat compile",
-  "deploy:testnet": "npx hardhat run deployment/deploy.js --network bscTestnet",
-  "deploy:sepolia": "npx hardhat run deployment/deploy.js --network sepolia",
-    "verify": "npx hardhat verify --network bscTestnet"
+    "deploy:sepolia": "npx hardhat run deployment/deploy.js --network sepolia",
+    "verify:sepolia": "npx hardhat verify --network sepolia",
+    "mint": "npx hardhat run mint/upload-and-mint.js --network sepolia",
+    "demo": "npx hardhat run deployment/demo.js --network sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "hardhat": "^2.22.0",
-    "dotenv": "^16.4.0"
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
     "nft.storage": "^6.0.0"
   }
 }
