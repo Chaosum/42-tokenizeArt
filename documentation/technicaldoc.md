@@ -65,32 +65,27 @@ Le contrat utilise 4 mappings principaux :
 npm install
 ```
 
-Créer un fichier `.env` :
+Créer un fichier `.env` (voir `.env.example`) :
 
 ```env
-SEPOLIA_RPC_URL=https://11155111.rpc.thirdweb.com/
+SEPOLIA_RPC_URL=...      # RPC Sepolia
 PRIVATE_KEY=0x...        # wallet déployeur (owner)
 PRIVATE_KEY_2=0x...      # second wallet (demo.js uniquement)
+ETHERSCAN_API_KEY=...    # clé API Etherscan
+CONTRACT_ADDRESS=0x...   # adresse après déploiement
+NFT_IMAGE_URI=...        # URL IPFS de l'image
+MINT_TITLE=...           # titre du NFT
+MINT_ARTIST=...          # artiste
+MINT_TO=0x...            # adresse de destination
 ```
-
 
 ### Commandes
 
 ```bash
 npm run compile          # compile le contrat → artifacts/
 npm run deploy:sepolia   # déploiement sur Sepolia (affiche l'adresse)
-```
-
----
-
-## Code de déploiement
-
-### `scripts/deploy.js`
-
-```js
-const factory = await ethers.getContractFactory("TokenizeArt42"); // charge ABI + bytecode
-const contract = await factory.deploy();                       // envoie la tx de création
-await contract.waitForDeployment();                            // attend la confirmation
-console.log(await contract.getAddress());                      // affiche l'adresse
+npm run mint             # mint un NFT
+npm run demo             # démonstration complète
+npm run verify:sepolia <addr>  # vérifie le source sur Etherscan
 ```
 

@@ -19,6 +19,7 @@ Ce contrat implémente ERC-721.
 
 - **Ethereum / Sepolia** : standard pour les NFT, testnet simple à utiliser.
 - **Métadonnées on-chain** : les infos du token (titre, image) sont stockées dans le contrat. `tokenURI()` construit et retourne le JSON directement depuis la blockchain — pas de serveur externe qui peut tomber.
+- **IPFS (Pinata)** : l'image est stockée sur un réseau décentralisé. Le CID garantit que l'image ne peut pas être modifiée — si le fichier change, l'URL change.
 - **Hardhat** : compile et déploie rapidement, réseau local intégré pour faire des tests.
 
 ## Commandes
@@ -26,15 +27,12 @@ Ce contrat implémente ERC-721.
 ```bash
 npm run compile          # compile → artifacts/
 npm run deploy:sepolia   # déploie sur Sepolia (affiche l'adresse)
-```
-
-Mint manuel après déploiement :
-
-```bash
-node mint/upload-and-mint.js "Titre" "Artiste" 0xAdresseDestinataire
+npm run mint             # mint un NFT (paramètres dans .env)
+npm run demo             # démonstration complète
+npm run verify:sepolia <addr>  # vérifie le source sur Etherscan
 ```
 
 ## Contrat déployé
 
-Sepolia : `<adresse à renseigner>`  
-https://sepolia.etherscan.io/address/<adresse>
+Sepolia : `0xAB57B63EBf41290a8Be6c4ea1e920CeC3EE6B28C`  
+https://sepolia.etherscan.io/address/0xAB57B63EBf41290a8Be6c4ea1e920CeC3EE6B28C#code

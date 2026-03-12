@@ -18,12 +18,13 @@ Le NFT minté représente l'image `42fusNFT.png`, une création originale conten
 | Symbole | `ART42` |
 | Standard | ERC-721 |
 | Blockchain | Ethereum Sepolia (testnet) |
-| Stockage image | GitHub (raw) |
+| Stockage image | IPFS (via Pinata) |
 | Métadonnées | On-chain (Base64 JSON) |
 
-L'image est hébergée sur GitHub.
+L'image est hébergée sur IPFS — un réseau de stockage décentralisé. Le CID (Content Identifier) est l'empreinte cryptographique du fichier, ce qui garantit que l'image ne peut pas être modifiée ou supprimée sans que l'URL change.
 
-- **URL :** `https://raw.githubusercontent.com/Chaosum/42-tokenizeArt/main/NFT/42fusNFT.png`
+- **CID :** `bafybeidit2ud3timi5zzlpyomwofvfnstlr3ujbl2euwa4my3xgewi2fky`
+- **URL :** `https://ipfs.io/ipfs/bafybeidit2ud3timi5zzlpyomwofvfnstlr3ujbl2euwa4my3xgewi2fky`
 
 ---
 
@@ -60,8 +61,8 @@ Appeler `tokenURI(tokenId)` retourne une chaîne `data:application/json;base64,.
 ```json
 {
   "name": "Titre de l'oeuvre",
-  "artist": "matth",
-  "image": "https://raw.githubusercontent.com/Chaosum/42-tokenizeArt/main/NFT/42fusNFT.png"
+  "artist": "mservage",
+  "image": "https://ipfs.io/ipfs/bafybeidit2ud3timi5zzlpyomwofvfnstlr3ujbl2euwa4my3xgewi2fky"
 }
 ```
 
