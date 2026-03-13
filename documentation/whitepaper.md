@@ -32,7 +32,7 @@ L'image est hébergée sur IPFS — un réseau de stockage décentralisé. Le CI
 
 ### Contrat
 
-Le contrat `TokenizeArt42.sol` implémente ERC-721 sans dépendance externe. Chaque token stocke son titre, son artiste et l'URI de son image directement dans le state du contrat.
+Le contrat `TokenizeArt42.sol` implémente ERC-721. Chaque token stocke son titre, son artiste et l'URI de son image directement dans le state du contrat.
 
 | Fonction | Description | Accès |
 |----------|-------------|-------|
