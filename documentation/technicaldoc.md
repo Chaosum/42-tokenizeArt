@@ -23,6 +23,8 @@ Le contrat utilise 4 mappings principaux :
 - `setApprovalForAll(operator, approved)` — Donne/retire les droits de transfert global à `operator`.
 - `isApprovedForAll(ownerAddr, operator)` — Vérifie si `operator` a les droits globaux sur les tokens de `ownerAddr`.
 - `transferFrom(from, to, tokenId)` — Transfère `tokenId` de `from` à `to`. Revert si appelant non autorisé ou adresse nulle.
+- `safeTransferFrom(from, to, tokenId)` — Transfère `tokenId` de `from` à `to` de façon sécurisée. Vérifie que `to` est soit une adresse EOA, soit un contrat qui implémente `onERC721Received()`. Revert si `to` est un contrat qui n'implémente pas l'interface ou qui refuse le transfer (retourne un sélecteur invalide).
+- `safeTransferFrom(from, to, tokenId, data)` — Surcharge avec données optionnelles (`bytes`). Appelle `onERC721Received(operator, from, tokenId, data)` sur `to` si contrat. Même sécurité que la version sans données.
 
 - `mintNFT(to, imageURI, title, artist)` — (onlyOwner) Crée un nouveau token pour `to` avec ses métadonnées. Revert si adresse nulle ou `imageURI` vide. Retourne le `tokenId`.
 - `totalMinted()` — Nombre total de tokens créés.
@@ -32,7 +34,25 @@ Le contrat utilise 4 mappings principaux :
 
 ---
 
-## Fonctions internes
+## transferFrom vs safeTransferFrom
+
+### `transferFrom(from, to, tokenId)`
+- Transfère le token sans contrôle supplémentaire.
+- **Danger** : si `to` est un contrat qui n'accepte pas les ERC-721 NFT, le token sera perdu et irrécupérable.
+- **Utilisation** : transfert vers une adresse EOA (wallet utilisateur) ou un contrat de confiance.
+
+### `safeTransferFrom(from, to, tokenId)`
+- Vérifie que `to` accepte les ERC-721 NFT en appelant `onERC721Received()` sur `to`.
+- Si `to` est un contrat qui n'implémente pas `onERC721Received()` ou qui refuse le transfer (retourne un sélecteur invalide), la transaction **revert** et le token ne change pas de propriétaire.
+- **Avantage** : prévient les pertes de tokens accidentelles vers des contrats incompatibles.
+- **Utilisation** : transfert sécurisé, particulièrement vers des adresses inconnues ou des contrats.
+
+### `safeTransferFrom(from, to, tokenId, data)`
+- Identique à la version sans `data`, mais passe des données optionnelles (`bytes`) à `onERC721Received()`.
+- Utile si le contrat destinataire veut recevoir des instructions ou informations supplémentaires.
+- **Exemple** : `data` pourrait contenir des paramètres pour une action du contrat après réception.
+
+---
 
 - `_isApprovedOrOwner(spender, tokenId)` — Vérifie si `spender` est owner, approuvé ou operator du token.
 

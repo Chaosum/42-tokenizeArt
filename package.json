@@ -5,7 +5,7 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "deploy:sepolia": "npx hardhat run deployment/deploy.js --network sepolia",
-    "verify:sepolia": "npx hardhat verify --network sepolia",
+    "verify:sepolia": "node verify.js",
     "mint": "npx hardhat run mint/upload-and-mint.js --network sepolia",
     "demo": "npx hardhat run deployment/demo.js --network sepolia"
   },

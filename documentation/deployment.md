@@ -24,23 +24,11 @@ MINT_TO=0x...            # adresse de destination du mint
 ### Commandes
 
 ```bash
-npm run compile                            # compile le contrat → artifacts/
-npm run deploy:sepolia                     # déploiement sur Sepolia (affiche l'adresse)
-npx hardhat verify --network sepolia <addr> # vérifie le source sur Etherscan
-npx hardhat run mint/upload-and-mint.js --network sepolia  # mint un NFT
-```
-
----
-
-## Code de déploiement
-
-### `deployment/deploy.js`
-
-```js
-const factory = await ethers.getContractFactory("TokenizeArt42"); // charge ABI + bytecode
-const contract = await factory.deploy();                           // envoie la tx de création
-await contract.waitForDeployment();                                // attend la confirmation
-console.log(await contract.getAddress());                          // affiche l'adresse
+npm run compile                 # compile le contrat → artifacts/
+npm run deploy:sepolia          # déploiement sur Sepolia (affiche l'adresse)
+npm run verify:sepolia          # vérifie le source sur Etherscan (utilise CONTRACT_ADDRESS du .env)
+npm run mint                    # mint un NFT
+npm run demo                    # démonstration complète
 ```
 
 ---
@@ -49,17 +37,21 @@ console.log(await contract.getAddress());                          // affiche l'
 
 La vérification publie le code source sur Etherscan pour permettre une lecture publique du contrat.
 
-**Prérequis** : avoir une clé API Etherscan dans `.env` sous `ETHERSCAN_API_KEY`.
+**Prérequis** : 
+- avoir une clé API Etherscan dans `.env` sous `ETHERSCAN_API_KEY`
+- avoir l'adresse du contrat déployé dans `.env` sous `CONTRACT_ADDRESS`
 
+**Commande** :
 ```bash
-npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
+npm run verify:sepolia
 ```
 
-Points importants :
+Le script lit automatiquement `CONTRACT_ADDRESS` depuis votre `.env` et lance la vérification.
+
+**Points importants** :
 - Le contrat doit être vérifié **avec exactement les mêmes settings de compilation** que lors du déploiement (`viaIR`, `optimizer`, version Solidity).
 - Toute modification du source après déploiement rendra la vérification impossible sur l'ancienne adresse — il faut redéployer.
 - La config `etherscan.apiKey` doit être une **string simple** (API v2), pas un objet par réseau.
-
 ---
 
 ## Mint
